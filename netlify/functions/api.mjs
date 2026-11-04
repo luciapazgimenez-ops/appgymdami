@@ -62,13 +62,13 @@ export default async (req, context) => {
 
     if (path === 'data' && M === 'GET') {
       if (profe) {
-        const [students, templates] = await Promise.all([listJSON('students/'), listJSON('templates/')]);
+        const [students, templates, content] = await Promise.all([listJSON('students/'), listJSON('templates/'), getJSON('content/main')]);
         students.sort((a, b) => (a.created || 0) - (b.created || 0));
         templates.sort((a, b) => (a.created || 0) - (b.created || 0));
-        return json({ students, templates });
+        return json({ students, templates, content });
       }
-      const s = await getJSON('students/' + user.sid);
-      return json({ students: s ? [s] : [], templates: [] });
+      const [s, content] = await Promise.all([getJSON('students/' + user.sid), getJSON('content/main')]);
+      return json({ students: s ? [s] : [], templates: [], content });
     }
 
     if (path === 'ops' && M === 'POST') {
@@ -77,7 +77,7 @@ export default async (req, context) => {
       for (const op of ops) if (!allowed(user, op)) return fail('No tenés permiso para ese cambio', 403);
       const groups = new Map();
       for (const op of ops) {
-        const key = (op.k === 's' ? 'students/' : 'templates/') + op.id;
+        const key = ({ s: 'students/', t: 'templates/', c: 'content/' })[op.k] + op.id;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(op);
       }
@@ -87,7 +87,7 @@ export default async (req, context) => {
         let before = null, after = null, emailMove = null;
         const res = await updateJSON(key, (doc) => {
           before = doc ? JSON.parse(JSON.stringify(doc)) : null;
-          let d = doc ? JSON.parse(JSON.stringify(doc)) : null;
+          let d = doc ? JSON.parse(JSON.stringify(doc)) : key === 'content/main' ? { id: 'main' } : null;
           for (const op of list) {
             if (op.op === 'put') { d = op.v && typeof op.v === 'object' ? op.v : d; if (d) d.id = list[0].id; continue; }
             if (!d) return undefined; // el documento ya no existe
@@ -97,7 +97,7 @@ export default async (req, context) => {
           if (!d.created) d.created = before?.created || Date.now();
           after = d;
           return d;
-        }, { create: !isStudent && list.some((o) => o.op === 'put') });
+        }, { create: key === 'content/main' || (!isStudent && list.some((o) => o.op === 'put')) });
         if (!res && isStudent) return fail('Ese alumno ya no existe', 404);
         if (isStudent && before && after) {
           if (normEmail(before.email) !== normEmail(after.email)) emailMove = [before.email, after.email];

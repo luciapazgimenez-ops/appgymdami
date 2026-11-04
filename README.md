@@ -2,8 +2,8 @@
 
 App para un entrenador personal y sus alumnos. Negro y amarillo, instalable en el celular.
 
-- **Profe:** alumnos, planificación de 12 semanas, plantillas, avisos, pagos y vencimientos, progreso, medidas y respuestas a comentarios.
-- **Alumno (solo lectura de la rutina):** marca series, anota el peso, escribe al profe, marca el esfuerzo (RPE), carga medidas y fotos, ve su progreso y récords (medalla al completar la última serie con peso récord), recibe recordatorios.
+- **Profe:** alumnos, planificación de 12 semanas, plantillas, avisos, pagos y vencimientos, progreso, medidas, respuestas a comentarios, **mentalidad** (videos de YouTube y textos para todos), **alimentación** (plan de comidas de cada alumno) y **premios** (desafíos que se ganan solos, ej. 3 semanas seguidas entrenando 5 días → asesoría 1:1).
+- **Alumno (solo lectura de la rutina):** marca series, anota el peso, escribe al profe, marca el esfuerzo (RPE), carga medidas y fotos, ve su progreso y récords (medalla al completar la última serie con peso récord), recibe recordatorios, ve su plan de alimentación, el contenido de mentalidad y cuánto le falta para cada premio.
 
 Todo corre en **Netlify**: la página, las funciones (`/api/*`), los datos (Netlify Blobs), el login (email + contraseña o código) y las notificaciones (web push con una función programada cada 10 minutos). No hace falta ninguna otra cuenta ni configurar variables: las claves internas se generan solas la primera vez.
 

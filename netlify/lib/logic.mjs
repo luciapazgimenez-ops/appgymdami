@@ -1,12 +1,13 @@
 // Reglas de la app que también necesita el servidor.
 
 const BAD = new Set(['__proto__', 'prototype', 'constructor']);
-const STUDENT_PATHS = new Set(['logs', 'history', 'rpe', 'measures', 'remind']);
+const STUDENT_PATHS = new Set(['logs', 'history', 'rpe', 'measures', 'remind', 'seen']);
 
 export function allowed(user, op) {
   if (!op || !Array.isArray(op.p) || op.p.some((x) => BAD.has(String(x)))) return false;
   if (!['set', 'del', 'push', 'put', 'remove'].includes(op.op)) return false;
-  if (op.k !== 's' && op.k !== 't') return false;
+  if (op.k !== 's' && op.k !== 't' && op.k !== 'c') return false;
+  if (op.k === 'c' && (op.id !== 'main' || op.op === 'remove')) return false;
   if (typeof op.id !== 'string' || !/^[A-Za-z0-9_-]{1,40}$/.test(op.id)) return false;
   if (user.role === 'profe') {
     // altas y bajas de alumnos van por su propio camino (crean/borran la cuenta)

@@ -538,6 +538,31 @@ h1,h2,h3{font-family:var(--disp);font-weight:900;text-transform:uppercase;line-h
 .seg.full button{padding:11px 8px;font-size:15px}
 body:has(.rest.show) .toast{bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 .stack>.field{flex:none}
+.seg.six{grid-template-columns:repeat(3,minmax(0,1fr));border-radius:24px}
+.seg.six button{position:relative}
+.ndot{position:absolute;top:7px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--hot)}
+.seg.six button.on .ndot{background:var(--ink)}
+.tseg{align-self:flex-start;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.tseg button{white-space:nowrap}
+.yt{position:relative;display:block;width:100%;aspect-ratio:16/9;border:0;padding:0;border-radius:16px;overflow:hidden;background:#000}
+.yt img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85}
+.yt iframe{width:100%;height:100%;border:0;display:block}
+.ytp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:var(--y);color:var(--ink);display:grid;place-items:center}
+.ytp .ico{width:24px;height:24px;margin-left:3px}
+.meal{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;background:var(--s1);border-radius:var(--r);padding:16px}
+.meal .mt{font-family:var(--disp);font-weight:900;font-size:22px;color:var(--y);line-height:1.1}
+.meal h3{font-family:var(--body);text-transform:none;font-weight:700;font-size:17px}
+.meal p{margin:6px 0 0;color:var(--fg);line-height:1.5}
+.mealed{background:var(--s1);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px}
+.mealed input,.mealed textarea{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 12px;min-width:0}
+.mealed input:focus,.mealed textarea:focus{border-color:var(--y);outline:none}
+.mealed .mn{flex:1;font-weight:700}
+.mealed .mtm{width:120px;flex:none}
+.mealed textarea{resize:vertical}
+.rw{background:var(--s1);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;border:1px solid transparent}
+.rw.won{border-color:color-mix(in srgb,var(--y) 55%,transparent);background:color-mix(in srgb,var(--y) 6%,var(--s1))}
+.rw-p{font-weight:700;font-size:17px;line-height:1.25}
+.mind h3{font-family:var(--body);text-transform:none;font-weight:700;font-size:19px;line-height:1.2}
 #lf{max-width:460px;width:100%;justify-self:end}
 @media (max-width:820px){#lf{justify-self:stretch;max-width:none}}
 .btn:disabled{opacity:.55;pointer-events:none}
@@ -615,7 +640,7 @@ function defaultTemplates(){return [
 
 /* ===== datos en Netlify: se cargan del servidor y cada cambio se guarda solo ===== */
 let ME=null,NEEDS_SETUP=false;
-let db={students:[],templates:[]},snap=clone(db);
+let db={students:[],templates:[],content:{id:'main',mind:[],rewards:[]}},snap=clone(db);
 async function API(path,opt={}){
   const r=await fetch('/api/'+path,{method:opt.method||(opt.body?'POST':'GET'),headers:opt.body?{'content-type':'application/json'}:{},body:opt.body?JSON.stringify(opt.body):undefined,credentials:'same-origin',keepalive:!!opt.keepalive});
   let j={};try{j=await r.json()}catch(e){}
@@ -643,6 +668,7 @@ function opsFor(A0,B0){
     for(const[id,b]of B){const a=A.get(id);if(!a){ops.push({k,id,op:'put',p:[],v:b});continue}const o=[];dif(a,b,[],o);o.forEach(x=>ops.push({k,id,...x}))}
     for(const id of A.keys())if(!B.has(id))ops.push({k,id,op:'remove',p:[]});
   }
+  if(A0.content&&B0.content){const o=[];dif(A0.content,B0.content,[],o);o.forEach(x=>ops.push({k:'c',id:'main',...x}))}
   return ops;
 }
 let syncT=null,syncing=false,again=false,offT=0;
@@ -669,22 +695,22 @@ async function refresh(force){
   if(!force&&pending())return;
   const a=document.activeElement;
   if(!force&&a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;
-  let d;try{d=await API('data')}catch(e){return}
+  let d;try{d=normData(await API('data'))}catch(e){return}
   if(!force&&pending())return;
   const changed=JSON.stringify(d)!==JSON.stringify(snap);
-  db=d;snap=clone(d);
+  normData(d);db=d;snap=clone(d);
   if(changed||force)render();
 }
 setInterval(()=>{document.visibilityState==='visible'&&refresh()},30000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh();else flush(true)});
 addEventListener('pagehide',()=>flush(true));
-function loggedOut(){ME=null;db={students:[],templates:[]};snap=clone(db);NAV.length=0;stopRest();S={...S,role:null,sid:null,view:'home',week:0,day:0,tab:'plan',stab:'rutina',ttab:'alumnos',open:{}};try{history.replaceState(null,'',location.pathname)}catch(e){}render()}
+function loggedOut(){ME=null;db=normData({});snap=clone(db);NAV.length=0;stopRest();S={...S,role:null,sid:null,view:'home',week:0,day:0,tab:'plan',stab:'rutina',ttab:'alumnos',open:{}};try{history.replaceState(null,'',location.pathname)}catch(e){}render()}
 function enter(user){
   ME=user;S.role=user.role;S.open={};
   if(user.role==='alumno'){S.sid=user.sid;const s=stu();S.week=s?curWeek(s):0;S.view='home';S.stab='rutina'}
   else{S.view='list';S.ttab='alumnos'}
 }
-async function loadData(){const d=await API('data');db=d;snap=clone(d)}
+async function loadData(){const d=normData(await API('data'));db=d;snap=clone(d)}
 let S={role:null,sid:null,view:'home',week:0,day:0,tab:'plan',stab:'rutina',ttab:'alumnos',tid:null,fx:null,open:{}};
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -723,6 +749,7 @@ function bill(s){const b=s.billing||{};const left=b.end?diffD(b.end,TODAY):null;
 function alerts(){
   const out=[];
   db.students.forEach(s=>{
+    CT().rewards.forEach(r=>{const x=rStat(s,r);if(x.won&&!x.given)out.push({s,k:'medal',cls:'ok',t:`${s.name} ganó: ${r.prize}`,sub:rText(r)+'. Coordiná la entrega.',tab:'prog',o:1})});
     unseen(s).forEach(m=>out.push({s,k:'chat',cls:'y',t:`${s.name} comentó en ${m.ex.name}`,sub:'“'+m.text+'”',tab:'prog',o:1}));
     const lt=lastTrain(s),idle=lt?diffD(TODAY,lt):null;
     if(s.start<=TODAY&&totals(s).pct<100&&(idle==null?diffD(TODAY,s.start)>=3:idle>=5))out.push({s,k:'clock',cls:'hot',t:`${s.name} no entrena hace ${idle??diffD(TODAY,s.start)} días`,sub:lt?'Último entrenamiento: '+fdate(lt):'Todavía no empezó',tab:'prog',o:2});
@@ -795,6 +822,9 @@ function student(){
   const s=stu();
   if(S.stab==='prog')return studentProg(s);
   if(S.stab==='med')return studentMed(s);
+  if(S.stab==='comida')return studentFood(s);
+  if(S.stab==='mente')return studentMind(s);
+  if(S.stab==='premios')return studentRewards(s);
   S.view==='day'?studentDay():studentHome();
 }
 function remindCard(s){
@@ -945,13 +975,15 @@ function studentDay(){
   const lastSet=(e,k)=>k===e.sets-1;
   $$('.set').forEach(b=>b.onclick=()=>{
     const id=b.dataset.id,k=+b.dataset.k,e=ex(id),l=L(id);
-    l.sets=Array.from({length:e.sets},(_,j)=>!!l.sets[j]); const was=dayDone(s,d),wasPR=isPR(s,S.week,e);
+    l.sets=Array.from({length:e.sets},(_,j)=>!!l.sets[j]); const was=dayDone(s,d),wasPR=isPR(s,S.week,e),wonB=wonIds(s);
     l.sets[k]=!l.sets[k];
     S.fx=l.sets[k]?id+':'+k:null;
     if(!was&&dayDone(s,d)){S.fx='stamp';stopRest();(s.history||(s.history=[])).push({date:TODAY,w:S.week,d:S.day});toast('¡Día completo!')}
     else if(was&&!dayDone(s,d)){s.history=(s.history||[]).filter(h=>!(h.w===S.week&&h.d===S.day))}
     else if(l.sets[k])startRest();
     if(lastSet(e,k)){if(l.sets[k]&&isDone(s,e)&&earnPR(s,S.week,e)){l.pr=true;S.fxPR=e.id;setTimeout(()=>toast('¡Récord! '+e.name+' con '+num(l.kg)+' kg'),50)}else if(!l.sets[k])l.pr=false}
+    const nw=wonIds(s).filter(x=>!wonB.includes(x)).map(x=>CT().rewards.find(r=>r.id===x));
+      if(nw.length){setTimeout(()=>toast('¡Ganaste un premio! '+nw[0].prize),900)}
     save();render();
   });
   const setKg=(id,v)=>{L(id).kg=v;save()};
@@ -1059,7 +1091,8 @@ function stopRest(){clearInterval(R.iv);R.iv=null;$('#rest').classList.remove('s
 function tick(){$('#rest-t').textContent=Math.floor(R.left/60)+':'+pad(R.left%60);$('#rest-bar').style.width=(R.left/R.dur*100)+'%'}
 $('#rest-skip').onclick=stopRest;
 $$('[data-r]').forEach(b=>b.onclick=()=>{R.dur=+b.dataset.r;startRest()});
-function secNav(){return `<div class="seg full" role="tablist" aria-label="Secciones">${[['rutina','Rutina'],['prog','Progreso'],['med','Medidas']].map(([k,n])=>`<button data-sec="${k}" class="${S.stab===k?'on':''}" role="tab" aria-selected="${S.stab===k}">${n}</button>`).join('')}</div>`}
+function secNav(){const s=stu(),nm=s?mindNew(s):0,nw=s?CT().rewards.filter(r=>{const x=rStat(s,r);return x.won&&!x.given}).length:0;
+  return `<div class="seg full six" role="tablist" aria-label="Secciones">${[['rutina','Rutina'],['comida','Comida'],['mente','Mentalidad',nm],['premios','Premios',nw],['prog','Progreso'],['med','Medidas']].map(([k,n,d])=>`<button data-sec="${k}" class="${S.stab===k?'on':''}" role="tab" aria-selected="${S.stab===k}">${n}${d?'<i class="ndot"></i>':''}</button>`).join('')}</div>`}
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-sec]');if(!b)return;S.stab=b.dataset.sec;S.view='home';stopRest();render();scrollTo(0,0)});
 function goBack(fallback){if(NAV.length>1){history.back()}else{fallback();render();scrollTo(0,0)}}
 function backBar(label){return `<div class="row sp"><button class="btn sm ghost" id="back">${ICON.back}${label}</button></div>`}
@@ -1067,38 +1100,220 @@ function backBar(label){return `<div class="row sp"><button class="btn sm ghost"
 const NAV=[];
 function hashFor(){
   if(!S.role)return '';
-  if(S.role==='alumno'){if(S.stab==='prog')return 'progreso';if(S.stab==='med')return 'medidas';return S.view==='day'?`dia-${S.week+1}-${S.day+1}`:'rutina'}
+  if(S.role==='alumno'){if(S.stab==='prog')return 'progreso';if(S.stab==='med')return 'medidas';if(S.stab==='comida')return 'comida';if(S.stab==='mente')return 'mentalidad';if(S.stab==='premios')return 'premios';return S.view==='day'?`dia-${S.week+1}-${S.day+1}`:'rutina'}
   if(S.view==='tpl')return 'plantilla-'+S.tid;
   if(S.view==='student')return `alumno-${S.sid}-${S.tab}`;
-  return S.ttab==='plantillas'?'plantillas':'alumnos';
+  return ['plantillas','mentalidad','premios'].includes(S.ttab)?S.ttab:'alumnos';
 }
 function applyHash(h){
   let m;
   if(!ME)return;
   if(ME.role==='alumno'){
     S.role='alumno';S.sid=ME.sid;const s=stu();if(!s)return;
-    S.stab=h==='progreso'?'prog':h==='medidas'?'med':'rutina';S.view='home';
+    S.stab={progreso:'prog',medidas:'med',comida:'comida',mentalidad:'mente',premios:'premios'}[h]||'rutina';S.view='home';
     if((m=h.match(/^dia-(\d+)-(\d+)$/))){S.week=Math.max(0,Math.min(+m[1]-1,s.plan.length-1));S.day=Math.max(0,Math.min(+m[2]-1,s.plan[S.week].days.length-1));S.view='day'}
     return}
   S.role='profe';
-  if(h==='alumnos'||h==='plantillas'){S.view='list';S.ttab=h;return}
-  if((m=h.match(/^alumno-([A-Za-z0-9_-]+)-(plan|prog|med|pagos|data)$/))&&db.students.find(x=>x.id===m[1])){const was=S.sid;S.view='student';S.sid=m[1];S.tab=m[2];if(was!==m[1]){S.week=curWeek(stu());S.day=0}return}
+  if(['alumnos','plantillas','mentalidad','premios'].includes(h)){S.view='list';S.ttab=h;return}
+  if((m=h.match(/^alumno-([A-Za-z0-9_-]+)-(plan|comida|prog|med|pagos|data)$/))&&db.students.find(x=>x.id===m[1])){const was=S.sid;S.view='student';S.sid=m[1];S.tab=m[2];if(was!==m[1]){S.week=curWeek(stu());S.day=0}return}
   if((m=h.match(/^plantilla-([A-Za-z0-9_-]+)$/))&&db.templates.find(x=>x.id===m[1])){S.view='tpl';S.tid=m[1];return}
   S.view='list';S.ttab='alumnos';
 }
 function syncHash(){const h=hashFor();if(location.hash.slice(1)!==h){if(NAV.at(-1)!==h)NAV.push(h);try{location.hash=h}catch(e){}}else if(!NAV.length)NAV.push(h)}
 addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h===hashFor())return;if(NAV.at(-2)===h)NAV.pop();else NAV.push(h);stopRest();applyHash(h);render();scrollTo(0,0)});
 
+/* ================= MENTALIDAD · ALIMENTACIÓN · PREMIOS ================= */
+const CT=()=>db.content||(db.content={id:'main',mind:[],rewards:[]});
+function normData(d){d.students=d.students||[];d.templates=d.templates||[];const c=d.content||{};d.content={id:'main',...c,mind:c.mind||[],rewards:c.rewards||[]};return d}
+const ytId=u=>{const m=String(u||'').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/);return m?m[1]:null};
+const nl=t=>esc(t).replace(/\n/g,'<br>');
+const linkify=t=>nl(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--y)">$1</a>');
+
+/* --- mentalidad --- */
+function mindNew(s){const seen=s?.seen?.mind||'';return CT().mind.filter(m=>(m.date||'')>seen).length}
+function mindItem(m,profe){
+  const id=ytId(m.url);
+  const media=m.type==='video'?(id?(S.open['yt-'+m.id]?`<div class="yt"><iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0" title="${esc(m.title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`
+      :`<button class="yt" data-yt="${m.id}" aria-label="Ver video ${esc(m.title)}"><img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="" loading="lazy"><span class="ytp">${ICON.play}</span></button>`)
+    :`<a class="btn sm" href="${esc(m.url)}" target="_blank" rel="noopener" style="align-self:flex-start">${ICON.play}Ver video</a>`):'';
+  return `<article class="card stack mind" style="gap:12px">
+    <div class="row sp" style="flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0"><span class="lbl ${m.type==='video'?'y':''}">${m.type==='video'?'Video':'Para leer'} · ${fdate((m.date||'').slice(0,10))}</span><h3 style="margin-top:6px">${esc(m.title)}</h3></div>
+      ${profe?`<button class="btn sm ghost warn" data-mdx="${m.id}" aria-label="Borrar">${ICON.x}</button>`:''}</div>
+    ${media}${m.text?`<p style="margin:0;line-height:1.55">${linkify(m.text)}</p>`:''}
+  </article>`;
+}
+function mindHTML(profe){
+  const list=CT().mind.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||0);
+  const f=S.open.mform2;
+  return `<div class="stack" style="gap:22px">
+    <div class="stack" style="gap:8px"><span class="lbl y">${profe?'Lo ven todos tus alumnos':'De tu profe para vos'}</span><h1 ${profe?'style="font-size:clamp(48px,9vw,88px)"':''}>Mentalidad</h1></div>
+    ${profe?`<div class="row"><button class="btn y" id="mi-new">${ICON.plus}${f?'Cerrar':'Agregar video o texto'}</button></div>
+      ${f?`<div class="drawer stack">
+        <div class="seg" role="tablist" style="align-self:flex-start"><button data-mt="video" class="${f==='video'?'on':''}">Video de YouTube</button><button data-mt="text" class="${f==='text'?'on':''}">Texto</button></div>
+        <div class="field"><label for="mi-title">Título</label><input id="mi-title" placeholder="${f==='video'?'Ej: Cómo sostener la constancia':'Ej: La disciplina le gana a la motivación'}"></div>
+        ${f==='video'?'<div class="field"><label for="mi-url">Link de YouTube</label><input id="mi-url" inputmode="url" placeholder="https://youtube.com/..."></div>':''}
+        <div class="field"><label for="mi-text">${f==='video'?'Comentario (opcional)':'Texto'}</label><textarea id="mi-text" rows="${f==='video'?3:7}" placeholder="${f==='video'?'Por qué lo recomendás…':'Escribí acá…'}"></textarea></div>
+        <div class="row"><button class="btn y" id="mi-save">Publicar</button></div></div>`:''}`:''}
+    ${list.length?`<div class="stack" style="gap:12px">${list.map(m=>mindItem(m,profe)).join('')}</div>`
+      :`<p class="mute" style="margin:0">${profe?'Todavía no cargaste nada. Sumá videos y textos para acompañar a tus alumnos.':'Tu profe todavía no cargó contenido. Cuando suba videos o textos, aparecen acá.'}</p>`}
+  </div>`;
+}
+function bindMind(profe){
+  $$('[data-yt]').forEach(b=>b.onclick=()=>{S.open['yt-'+b.dataset.yt]=true;render()});
+  if(!profe)return;
+  $('#mi-new').onclick=()=>{S.open.mform2=S.open.mform2?null:'video';render()};
+  $$('[data-mt]').forEach(b=>b.onclick=()=>{S.open.mform2=b.dataset.mt;render()});
+  $('#mi-save')&&($('#mi-save').onclick=()=>{const type=S.open.mform2,title=$('#mi-title').value.trim(),url=type==='video'?$('#mi-url').value.trim():'',text=$('#mi-text').value.trim();
+    if(!title){toast('Poné un título');return}
+    if(type==='video'&&!/^https?:\/\//.test(url)){toast('Pegá el link del video');return}
+    if(type==='text'&&!text){toast('Escribí el texto');return}
+    CT().mind.push({id:uid(),type,title,url,text,date:new Date().toISOString().slice(0,16)});S.open.mform2=null;save();render();toast('Publicado para todos tus alumnos')});
+  $$('[data-mdx]').forEach(b=>b.onclick=()=>{if(!confirm('¿Borrar este contenido?'))return;CT().mind=CT().mind.filter(m=>m.id!==b.dataset.mdx);save();render();toast('Borrado')});
+}
+function studentMind(s){
+  $('#app').innerHTML=`<div class="stack" style="gap:22px">${backBar('Rutina')}${secNav()}${mindHTML(false)}</div>`;
+  $('#back').onclick=()=>goBack(()=>{S.stab='rutina';S.view='home'});
+  bindMind(false);
+  const last=CT().mind.map(m=>m.date||'').sort().at(-1);
+  if(last&&(s.seen?.mind||'')<last){(s.seen||(s.seen={})).mind=last;save()}
+}
+
+/* --- alimentación --- */
+const MEALS=['Desayuno','Media mañana','Almuerzo','Merienda','Pre entreno','Post entreno','Cena'];
+function foodView(s){
+  const f=s.food||{},meals=f.meals||[];
+  if(!meals.length&&!f.notes&&!f.link)return '<p class="mute" style="margin:0">Tu profe todavía no cargó tu plan de alimentación.</p>';
+  return `<div class="stack" style="gap:12px">
+    ${f.notes?`<div class="note" style="color:var(--fg)"><span class="lbl y" style="display:block;margin-bottom:4px">Indicaciones</span>${linkify(f.notes)}</div>`:''}
+    ${meals.map(m=>`<article class="meal"><div class="mt">${esc(m.time||'')}</div><div style="min-width:0"><h3>${esc(m.name||'Comida')}</h3><p>${linkify(m.detail||'')}</p></div></article>`).join('')}
+    ${f.link?`<a class="btn" href="${esc(f.link)}" target="_blank" rel="noopener" style="align-self:flex-start">Ver plan completo →</a>`:''}
+  </div>`;
+}
+function studentFood(s){
+  $('#app').innerHTML=`<div class="stack" style="gap:22px">${backBar('Rutina')}${secNav()}
+    <div class="stack" style="gap:8px"><span class="lbl y">Tu plan</span><h1>Alimentación</h1></div>${foodView(s)}</div>`;
+  $('#back').onclick=()=>goBack(()=>{S.stab='rutina';S.view='home'});
+}
+function tabFood(s){
+  const f=s.food||(s.food={notes:'',link:'',meals:[]});f.meals=f.meals||[];
+  $('#tb').innerHTML=`<div class="stack" style="gap:18px;max-width:820px">
+    <div class="field"><label for="fd-notes">Indicaciones generales (agua, suplementos, qué evitar…)</label><textarea id="fd-notes" rows="3">${esc(f.notes||'')}</textarea></div>
+    <div class="stack" style="gap:8px">${f.meals.map((m,i)=>`<div class="mealed" data-i="${i}">
+      <div class="row" style="flex-wrap:nowrap"><input class="mn" data-mf="name" value="${esc(m.name)}" list="meal-names" aria-label="Comida"><input class="mtm" data-mf="time" type="time" value="${esc(m.time||'')}" aria-label="Hora">
+        <span class="acts"><button data-mu="${i}" aria-label="Subir">${ICON.up}</button><button class="x" data-mx="${i}" aria-label="Quitar">${ICON.x}</button></span></div>
+      <textarea data-mf="detail" rows="3" placeholder="Ej: 2 huevos + 1 tostada integral + café" aria-label="Qué come">${esc(m.detail||'')}</textarea></div>`).join('')||'<p class="mute" style="margin:0">Todavía no hay comidas cargadas.</p>'}</div>
+    <datalist id="meal-names">${MEALS.map(m=>`<option value="${m}">`).join('')}</datalist>
+    <div class="row"><button class="btn y" id="fd-add">${ICON.plus}Agregar comida</button>
+      ${db.students.filter(x=>x.id!==s.id&&x.food?.meals?.length).length?`<select id="fd-copy" class="timein" style="border-radius:999px"><option value="">Copiar plan de…</option>${db.students.filter(x=>x.id!==s.id&&x.food?.meals?.length).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>`:''}</div>
+    <div class="field"><label for="fd-link">Link a un plan completo (PDF, Drive) — opcional</label><input id="fd-link" inputmode="url" value="${esc(f.link||'')}" placeholder="https://"></div>
+    <p class="mute" style="margin:0;font-size:13px">Se guarda solo. ${esc(s.name)} lo ve en la sección Comida.</p>
+  </div>`;
+  $('#fd-notes').onchange=e=>{f.notes=e.target.value.trim();save();toast('Guardado')};
+  $('#fd-link').onchange=e=>{f.link=e.target.value.trim();save();toast('Guardado')};
+  $('#fd-add').onclick=()=>{const used=f.meals.map(m=>m.name);f.meals.push({id:uid(),name:MEALS.find(m=>!used.includes(m))||'Comida',time:'',detail:''});save();render();const t=$$('.mealed textarea');t[t.length-1]?.focus()};
+  $$('.mealed [data-mf]').forEach(inp=>inp.onchange=()=>{const m=f.meals[+inp.closest('.mealed').dataset.i];m[inp.dataset.mf]=inp.value.trim();save();toast('Guardado')});
+  $$('[data-mx]').forEach(b=>b.onclick=()=>{f.meals.splice(+b.dataset.mx,1);save();render()});
+  $$('[data-mu]').forEach(b=>b.onclick=()=>{const i=+b.dataset.mu;if(i>0){[f.meals[i-1],f.meals[i]]=[f.meals[i],f.meals[i-1]];save();render()}});
+  $('#fd-copy')&&($('#fd-copy').onchange=e=>{const o=db.students.find(x=>x.id===e.target.value);if(!o)return;s.food=clone(o.food);s.food.meals.forEach(m=>m.id=uid());save();render();toast('Plan copiado de '+o.name)});
+}
+
+/* --- premios --- */
+const RT={
+  weeks:{n:'Semanas seguidas entrenando',f:r=>`${r.goal} semana${r.goal>1?'s':''} seguida${r.goal>1?'s':''} entrenando ${r.per} día${r.per>1?'s':''} o más por semana`},
+  total:{n:'Cantidad de entrenamientos',f:r=>`Completar ${r.goal} entrenamiento${r.goal>1?'s':''}`},
+  prs:{n:'Récords personales',f:r=>`Lograr ${r.goal} récord${r.goal>1?'s':''} personal${r.goal>1?'es':''}`},
+  plan:{n:'Terminar el plan de 12 semanas',f:()=>'Completar el plan de 12 semanas'},
+  manual:{n:'Lo entrego yo a mano',f:r=>r.desc||'Lo otorga tu profe'}
+};
+const rText=r=>(RT[r.type]||RT.manual).f(r);
+function weekRuns(s,per){
+  const ds=[...new Set((s.history||[]).map(h=>h.date))].sort();
+  if(!ds.length)return{best:0,cur:0};
+  let mon=monday(ds[0]),end=monday(TODAY),run=0,best=0,cur=0;
+  while(mon<=end){const n=ds.filter(d=>d>=mon&&d<addD(mon,7)).length;
+    if(n>=per){run++;best=Math.max(best,run)}else if(mon<end)run=0;
+    mon=addD(mon,7)}
+  cur=run;return{best,cur};
+}
+function rStat(s,r){
+  const st=s.rewards?.[r.id]||{};let cur=0,goal=Math.max(1,+r.goal||1),auto;
+  if(r.type==='weeks'){const w=weekRuns(s,Math.max(1,+r.per||1));cur=w.best>=goal?goal:w.cur;auto=w.best>=goal}
+  else if(r.type==='total'){cur=new Set((s.history||[]).map(h=>h.w+'-'+h.d)).size;auto=cur>=goal}
+  else if(r.type==='prs'){cur=Object.values(s.logs||{}).filter(l=>l&&l.pr).length;auto=cur>=goal}
+  else if(r.type==='plan'){goal=100;cur=totals(s).pct;auto=cur>=100}
+  else{goal=1;cur=st.granted?1:0;auto=false}
+  const won=auto||!!st.granted;
+  return{cur:Math.min(cur,goal),goal,won,given:st.given||null,date:st.won||null};
+}
+const wonIds=s=>CT().rewards.filter(r=>rStat(s,r).won).map(r=>r.id);
+function rewardCard(s,r,mode){
+  const x=s?rStat(s,r):{cur:0,goal:1,won:false},pct=Math.round(x.cur/x.goal*100);
+  return `<article class="rw ${x.won?'won':''}">
+    <div class="row" style="gap:12px;flex-wrap:nowrap;align-items:flex-start"><span class="medal ${x.won?'g':''}">${ICON.medal}</span>
+      <div style="min-width:0;flex:1"><div class="rw-p">${esc(r.prize)}</div><div class="mute" style="font-size:13px;margin-top:3px">${esc(rText(r))}</div></div>
+      ${mode==='edit'?`<button class="btn sm ghost warn" data-rx="${r.id}" aria-label="Borrar premio">${ICON.x}</button>`:''}</div>
+    ${mode==='edit'?'':x.won?`<div class="row sp"><span class="pill ok">${x.given?'✓ Entregado el '+fdate(x.given):'¡Ganado!'}</span>${mode==='profe'&&!x.given?`<button class="btn sm y" data-rg="${r.id}">Marcar entregado</button>`:mode==='alumno'&&!x.given?'<span class="mute" style="font-size:13px">Coordiná con tu profe</span>':''}</div>`
+      :r.type==='manual'?(mode==='profe'?`<button class="btn sm" data-rm="${r.id}" style="align-self:flex-start">Otorgar a ${esc(s.name)}</button>`:''):`<div><div class="row sp" style="font-size:13px"><span class="mute">Tu avance</span><b class="mono">${num(x.cur)}${r.type==='plan'?'%':' / '+x.goal}</b></div><div class="pbar"><i style="width:${pct}%"></i></div></div>`}
+  </article>`;
+}
+function bindRewardMarks(s){
+  const st=id=>(s.rewards||(s.rewards={}))[id]||(s.rewards[id]={});
+  $$('[data-rg]').forEach(b=>b.onclick=()=>{st(b.dataset.rg).given=TODAY;save();render();toast('Marcado como entregado')});
+  $$('[data-rm]').forEach(b=>b.onclick=()=>{const o=st(b.dataset.rm);o.granted=true;o.won=TODAY;save();render();toast('Premio otorgado')});
+}
+function studentRewards(s){
+  const rs=CT().rewards;
+  $('#app').innerHTML=`<div class="stack" style="gap:22px">${backBar('Rutina')}${secNav()}
+    <div class="stack" style="gap:8px"><span class="lbl y">Desafíos de tu profe</span><h1>Premios</h1></div>
+    ${rs.length?`<div class="stack" style="gap:10px">${rs.map(r=>rewardCard(s,r,'alumno')).join('')}</div>`:'<p class="mute" style="margin:0">Tu profe todavía no cargó premios. Cuando lo haga, acá ves cuánto te falta para ganarlos.</p>'}</div>`;
+  $('#back').onclick=()=>goBack(()=>{S.stab='rutina';S.view='home'});
+}
+function rewardsAdmin(){
+  const rs=CT().rewards,f=S.open.rform;
+  $('#app').innerHTML=`<div class="stack" style="gap:28px">
+    ${topSeg()}
+    <div class="row sp" style="align-items:flex-end"><div class="stack" style="gap:8px"><span class="lbl y">Desafíos para todos tus alumnos</span><h1 style="font-size:clamp(48px,9vw,88px)">Premios <span class="mute">${rs.length}</span></h1></div>
+      <button class="btn y" id="rw-new">${ICON.plus}${f?'Cerrar':'Nuevo premio'}</button></div>
+    ${f?`<div class="drawer stack">
+      <div class="field"><label for="rw-prize">Premio</label><input id="rw-prize" placeholder="Ej: Asesoría 1:1 de 30 minutos"></div>
+      <div class="field"><label for="rw-type">Cómo se gana</label><select id="rw-type">${Object.entries(RT).map(([k,v])=>`<option value="${k}" ${f.type===k?'selected':''}>${v.n}</option>`).join('')}</select></div>
+      ${f.type==='weeks'?`<div class="row"><div class="field" style="flex:1 1 140px"><label for="rw-goal">Semanas seguidas</label><input id="rw-goal" inputmode="numeric" value="3"></div><div class="field" style="flex:1 1 140px"><label for="rw-per">Días de entreno por semana</label><input id="rw-per" inputmode="numeric" value="5"></div></div>`
+        :f.type==='total'?'<div class="field"><label for="rw-goal">Entrenamientos</label><input id="rw-goal" inputmode="numeric" value="20"></div>'
+        :f.type==='prs'?'<div class="field"><label for="rw-goal">Récords</label><input id="rw-goal" inputmode="numeric" value="10"></div>'
+        :f.type==='manual'?'<div class="field"><label for="rw-desc">Cómo se gana (lo ve el alumno)</label><input id="rw-desc" placeholder="Ej: Traer a un amigo al gimnasio"></div>':''}
+      <p class="mute" style="margin:0;font-size:13px">${f.type==='manual'?'Vos lo otorgás desde la pestaña Progreso de cada alumno.':'La app lo calcula sola: cuando un alumno lo gana te aparece en Avisos.'}</p>
+      <div class="row"><button class="btn y" id="rw-save">Crear premio</button></div></div>`:''}
+    ${rs.length?`<div class="tpls">${rs.map(r=>{const w=db.students.filter(s=>rStat(s,r).won);return `<div class="stack" style="gap:8px">${rewardCard(null,r,'edit')}
+      <div class="mute" style="font-size:13px;padding:0 6px">${w.length?'Lo ganaron: '+w.map(s=>esc(s.name)+(rStat(s,r).given?' ✓':'')).join(', '):'Nadie lo ganó todavía'}</div></div>`}).join('')}</div>`
+      :'<p class="mute" style="margin:0">Creá desafíos con premio, por ejemplo: 3 semanas seguidas entrenando todos los días → asesoría 1:1 de 30 minutos. Tus alumnos ven cuánto les falta.</p>'}
+  </div>`;
+  bindSeg();
+  $('#rw-new').onclick=()=>{S.open.rform=S.open.rform?null:{type:'weeks'};render()};
+  $('#rw-type')&&($('#rw-type').onchange=e=>{const p=$('#rw-prize').value;S.open.rform={type:e.target.value};render();$('#rw-prize').value=p});
+  $('#rw-save')&&($('#rw-save').onclick=()=>{const prize=$('#rw-prize').value.trim();if(!prize){toast('Escribí el premio');$('#rw-prize').focus();return}
+    const type=S.open.rform.type,r={id:uid(),prize,type,goal:Math.max(1,parseInt($('#rw-goal')?.value)||1)};
+    if(type==='weeks')r.per=Math.max(1,Math.min(7,parseInt($('#rw-per').value)||1));
+    if(type==='manual')r.desc=$('#rw-desc').value.trim();
+    CT().rewards.push(r);S.open.rform=null;save();render();toast('Premio creado')});
+  $$('[data-rx]').forEach(b=>b.onclick=()=>{if(!confirm('¿Borrar este premio?'))return;CT().rewards=CT().rewards.filter(r=>r.id!==b.dataset.rx);save();render();toast('Premio borrado')});
+}
+function mindAdmin(){
+  $('#app').innerHTML=`<div class="stack" style="gap:28px">${topSeg()}${mindHTML(true)}</div>`;
+  bindSeg();bindMind(true);
+}
+
 /* ================= PROFESOR ================= */
 function trainer(){
   if(S.view==='tpl'&&db.templates.find(t=>t.id===S.tid))return tplEdit();
   S.view==='student'&&stu()?trainerStudent():trainerList();
 }
-function topSeg(){return `<div class="seg" role="tablist" style="align-self:flex-start"><button data-tt="alumnos" class="${S.ttab==='alumnos'?'on':''}">Alumnos</button><button data-tt="plantillas" class="${S.ttab==='plantillas'?'on':''}">Plantillas</button></div>`}
+function topSeg(){return `<div class="seg tseg" role="tablist">${[['alumnos','Alumnos'],['plantillas','Plantillas'],['mentalidad','Mentalidad'],['premios','Premios']].map(([k,n])=>`<button data-tt="${k}" class="${S.ttab===k?'on':''}">${n}</button>`).join('')}</div>`}
 function bindSeg(){$$('[data-tt]').forEach(b=>b.onclick=()=>{S.ttab=b.dataset.tt;S.view='list';render()})}
-const AIC={chat:ICON.chat,clock:ICON.clock,money:ICON.money,bolt:ICON.bolt};
+const AIC={chat:ICON.chat,clock:ICON.clock,money:ICON.money,bolt:ICON.bolt,medal:ICON.medal};
 function trainerList(){
   if(S.ttab==='plantillas')return tplList();
+  if(S.ttab==='mentalidad')return mindAdmin();
+  if(S.ttab==='premios')return rewardsAdmin();
   const al=alerts();
   $('#app').innerHTML=`<div class="stack" style="gap:28px">
     ${topSeg()}
@@ -1125,7 +1340,7 @@ function trainerList(){
       </button>`}).join('')}</div>
     <section class="stack" style="gap:12px"><h2 class="sec-t">Quién puede hacer qué</h2>
       <div class="perm"><div class="r h lbl"><span>Acción</span><span>Profesor</span><span>Alumno</span></div>
-      ${[['Crear, editar y borrar alumnos',1,0],['Armar y cambiar la planificación',1,0],['Añadir, quitar o reordenar ejercicios',1,0],['Ver la rutina',1,'Solo la suya'],['Marcar series y anotar el peso usado',0,1],['Comentar un ejercicio','Responde',1],['Marcar el esfuerzo del día',0,1],['Cargar medidas y fotos',1,'Las suyas'],['Pagos, vencimientos y plantillas',1,0],['Ver el progreso de todos',1,0]].map(r=>`<div class="r"><span>${r[0]}</span><span class="${r[1]?'yes':'nope'}">${r[1]===1?'Sí':r[1]||'No'}</span><span class="${r[2]?'yes':'nope'}">${r[2]===1?'Sí':r[2]||'No'}</span></div>`).join('')}</div></section>
+      ${[['Crear, editar y borrar alumnos',1,0],['Armar y cambiar la planificación',1,0],['Añadir, quitar o reordenar ejercicios',1,0],['Ver la rutina',1,'Solo la suya'],['Marcar series y anotar el peso usado',0,1],['Comentar un ejercicio','Responde',1],['Marcar el esfuerzo del día',0,1],['Cargar medidas y fotos',1,'Las suyas'],['Pagos, vencimientos y plantillas',1,0],['Mentalidad, alimentación y premios','Carga','Ve'],['Ver el progreso de todos',1,0]].map(r=>`<div class="r"><span>${r[0]}</span><span class="${r[1]?'yes':'nope'}">${r[1]===1?'Sí':r[1]||'No'}</span><span class="${r[2]?'yes':'nope'}">${r[2]===1?'Sí':r[2]||'No'}</span></div>`).join('')}</div></section>
     ${accountCard()}
   </div>`;
   bindSeg();bindAccount();
@@ -1186,7 +1401,7 @@ function bindCode(s){
 }
 function trainerStudent(){
   const s=stu(),t=totals(s),uc=unseen(s).length,b=bill(s);
-  const tabs=[['plan','Planificación'],['prog','Progreso'+(uc?` <span class="cchip">${uc}</span>`:'')],['med','Medidas'],['pagos','Pagos'+(!b.paid||b.left<=7?' <span class="cchip" style="background:var(--hot)">!</span>':'')],['data','Datos']];
+  const tabs=[['plan','Planificación'],['prog','Progreso'+(uc?` <span class="cchip">${uc}</span>`:'')],['comida','Alimentación'],['med','Medidas'],['pagos','Pagos'+(!b.paid||b.left<=7?' <span class="cchip" style="background:var(--hot)">!</span>':'')],['data','Datos']];
   $('#app').innerHTML=`<div class="stack" style="gap:22px">
     <button class="btn sm ghost" id="back" style="align-self:flex-start">${ICON.back}Alumnos</button>
     <div class="row sp" style="align-items:flex-end"><div class="stack" style="gap:8px"><span class="lbl">${esc(s.email||'Sin email')} · inicio ${fdate(s.start)}</span><h1 style="font-size:clamp(48px,9vw,84px)">${esc(s.name)}</h1></div>
@@ -1197,7 +1412,7 @@ function trainerStudent(){
   $('#back').onclick=()=>goBack(()=>{S.view='list'});
   bindCode(s);
   $$('.tab').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;render()});
-  ({plan:()=>planEditor(s,false),prog:tabProg,med:tabMed,pagos:tabPagos,data:tabData})[S.tab](s);
+  ({plan:()=>planEditor(s,false),comida:tabFood,prog:tabProg,med:tabMed,pagos:tabPagos,data:tabData})[S.tab](s);
 }
 function planEditor(s,isTpl){
   const w=s.plan[S.week],d=w.days[S.day];
@@ -1273,6 +1488,7 @@ function tabProg(s){
     <section class="stack" style="gap:12px"><h2 class="sec-t">Esfuerzo percibido</h2><div class="card">${rpeHTML(s)}</div></section>
     <section class="stack" style="gap:10px"><h2 class="sec-t">Cumplimiento por semana</h2>
       <div class="wkpct">${s.plan.map(w=>{const p=wkStats(s,w).p;return `<div title="Semana ${w.week}: ${Math.round(p*100)}%"><span>${Math.round(p*100)}</span><i style="height:${Math.max(2,p*80)}%;${p<1?'opacity:.55':''}"></i><span>S${w.week}</span></div>`}).join('')}</div></section>
+    ${CT().rewards.length?`<section class="stack" style="gap:12px"><h2 class="sec-t">Premios</h2><div class="grid2">${CT().rewards.map(r=>rewardCard(s,r,'profe')).join('')}</div></section>`:''}
     <section class="stack" style="gap:12px"><h2 class="sec-t">Récords personales</h2>${recsHTML(s,8)}</section>
     <section class="stack" style="gap:10px"><h2 class="sec-t">Kilos en los ejercicios principales</h2>
       <div class="lifts">${lifts.map(([di,name])=>{const vals=s.plan.map(w=>{const e=w.days[di]?.exercises.find(x=>x.name===name);const l=e&&s.logs[e.id];return l&&l.kg?l.kg:null});
@@ -1282,6 +1498,7 @@ function tabProg(s){
   </div>`;
   // al verlos, quedan leídos
   msgs.forEach(m=>{if(m.from==='alumno'){const mm=s.logs[m.ex.id].msgs.find(x=>x.ts===m.ts&&x.text===m.text);mm&&(mm.seen=true)}});save();
+  bindRewardMarks(s);
   $$('[data-rp]').forEach(b=>b.onclick=()=>{const id=b.dataset.rp,t=document.getElementById('rp-'+id).value.trim();if(!t)return;s.logs[id].msgs.push({from:'profe',text:t,ts:TODAY,seenA:false});save();render();toast('Respuesta enviada')});
 }
 function tabMed(s){$('#tb').innerHTML=measuresHTML(s,'profe');bindMeasures(s)}
@@ -1377,7 +1594,7 @@ function tplEdit(){
 async function boot(){
   $('#app').innerHTML='<p class="mute" style="padding:40px 0">Cargando…</p>';
   try{const r=await API('me');ME=r.user;NEEDS_SETUP=r.needsSetup;if(ME){await loadData();enter(ME)}}
-  catch(e){$('#app').innerHTML=`<div class="stack" style="padding:40px 0"><h1>Sin conexión</h1><p class="mute">No pudimos conectar con la app. Revisá internet y probá de nuevo.</p><button class="btn y" onclick="location.reload()" style="align-self:flex-start">Reintentar</button></div>`;return}
+  catch(e){if(e.status===401)return;$('#app').innerHTML=`<div class="stack" style="padding:40px 0"><h1>Sin conexión</h1><p class="mute">No pudimos conectar con la app. Revisá internet y probá de nuevo.</p><button class="btn y" onclick="location.reload()" style="align-self:flex-start">Reintentar</button></div>`;return}
   try{if(location.hash.length>1)applyHash(location.hash.slice(1))}catch(e){}
   render();
   if(ME)initPush();
